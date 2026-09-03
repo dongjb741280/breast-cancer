@@ -1,0 +1,49 @@
+/Users/dongjb/IdeaProjects/health/breast-cancer/Data_Cleaning/process_ocr/.venv/lib/python3.10/site-packages/paddle/utils/cpp_extension/extension_utils.py:712: UserWarning: No ccache found. Please be aware that recompiling all source files may be required. You can download and install ccache from: https://github.com/ccache/ccache/blob/master/doc/INSTALL.md
+  warnings.warn(warning_message)
+[32mCreating model: ('PP-DocBlockLayout', None, None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `/Users/dongjb/.paddlex/official_models/PP-DocBlockLayout`.[0m
+[32mCreating model: ('PP-DocLayout_plus-L', None, None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `/Users/dongjb/.paddlex/official_models/PP-DocLayout_plus-L`.[0m
+[32mCreating model: ('PP-OCRv5_server_det', None, None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `/Users/dongjb/.paddlex/official_models/PP-OCRv5_server_det`.[0m
+[32mCreating model: ('PP-OCRv5_server_rec', None, None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `/Users/dongjb/.paddlex/official_models/PP-OCRv5_server_rec`.[0m
+[32mCreating model: ('PP-LCNet_x1_0_table_cls', None, None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `/Users/dongjb/.paddlex/official_models/PP-LCNet_x1_0_table_cls`.[0m
+[32mCreating model: ('SLANeXt_wired', None, None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `/Users/dongjb/.paddlex/official_models/SLANeXt_wired`.[0m
+[32mCreating model: ('SLANet_plus', None, None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `/Users/dongjb/.paddlex/official_models/SLANet_plus`.[0m
+[32mCreating model: ('RT-DETR-L_wired_table_cell_det', None, None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `/Users/dongjb/.paddlex/official_models/RT-DETR-L_wired_table_cell_det`.[0m
+[32mCreating model: ('RT-DETR-L_wireless_table_cell_det', None, None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `/Users/dongjb/.paddlex/official_models/RT-DETR-L_wireless_table_cell_det`.[0m
+[1/20] processing pg-001.png (page 001)
+[32mCreating model: ('PP-LCNet_x1_0_doc_ori', None, None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `/Users/dongjb/.paddlex/official_models/PP-LCNet_x1_0_doc_ori`.[0m
+[32mCreating model: ('PP-LCNet_x1_0_textline_ori', None, None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `/Users/dongjb/.paddlex/official_models/PP-LCNet_x1_0_textline_ori`.[0m
+[32mCreating model: ('PP-OCRv5_server_det', None, None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `/Users/dongjb/.paddlex/official_models/PP-OCRv5_server_det`.[0m
+[32mCreating model: ('PP-OCRv5_server_rec', None, None)[0m
+[32mModel files already exist. Using cached files. To redownload, please delete the directory manually: `/Users/dongjb/.paddlex/official_models/PP-OCRv5_server_rec`.[0m
+[2/20] processing pg-002.png (page 002)
+[3/20] processing pg-003.png (page 003)
+[4/20] processing pg-004.png (page 004)
+[5/20] processing pg-005.png (page 005)
+[6/20] processing pg-006.png (page 006)
+[7/20] processing pg-007.png (page 007)
+[8/20] processing pg-008.png (page 008)
+[9/20] processing pg-009.png (page 009)
+[10/20] processing pg-010.png (page 010)
+[11/20] processing pg-011.png (page 011)
+[12/20] processing pg-012.png (page 012)
+[13/20] processing pg-013.png (page 013)
+[14/20] processing pg-014.png (page 014)
+[15/20] processing pg-015.png (page 015)
+[16/20] processing pg-016.png (page 016)
+[17/20] processing pg-017.png (page 017)
+[18/20] processing pg-018.png (page 018)
+[19/20] processing pg-019.png (page 019)
+[20/20] processing pg-020.png (page 020)
+wrote 20 pages -> output/guide.md

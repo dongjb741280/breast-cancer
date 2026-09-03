@@ -1,0 +1,16 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Rendered page images (regenerable via pdftoppm)
+pages/
+
+# Compiled OCR binary (rebuild with `swiftc -O ocr.swift -o ocr`)
+Data_Cleaning/process/ocr
+
+# Patient case data + source PDFs (de-identified but kept out of the public repo)
+Data_Cleaning/doc/
