@@ -4,6 +4,9 @@
 # IDE
 .vscode/
 
+# 向量库（生成物，需 API key 重新生成）
+knowledge_base/chroma/
+
 # Python
 __pycache__/
 *.py[cod]

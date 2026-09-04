@@ -1,18 +1,22 @@
-"""查询接口：结构化精确匹配（答案层）+ BM25（证据层）→ {命中,答案层,证据层}。
+"""查询接口：结构化精确匹配（答案层）+ BM25 + 向量 RRF（证据层）→ {命中,答案层,证据层}。
 
-向量（bge-m3）暂缺：transformers 5.x 与 bge-m3 不兼容，待 pin 版本后补 dense 路。
-当前证据层用 BM25 单路；结构化答案层无需模型。
+向量走网关 bge-m3（HH_API_KEY），无 key 时退化为 BM25 单路。
 """
 import json
+import os
 import pickle
 import re
 from pathlib import Path
 
+import chromadb
 from rank_bm25 import BM25Okapi
+
+from embed_api import embed
 
 RECORDS = Path("knowledge_base/records.json")
 CHUNKS = Path("knowledge_base/chunks.json")
 BM25 = Path("knowledge_base/bm25.pkl")
+CHROMA_DIR = Path("knowledge_base/chroma")
 
 LEVEL_ORDER = {"Ⅰ": 0, "Ⅱ": 1, "Ⅲ": 2}
 
@@ -27,6 +31,9 @@ class Retriever:
         self.chunks = json.loads(CHUNKS.read_text(encoding="utf-8"))
         with open(BM25, "rb") as f:
             self.bm = pickle.load(f)
+        self.col = None
+        if os.environ.get("HH_API_KEY") and CHROMA_DIR.exists():
+            self.col = chromadb.PersistentClient(path=str(CHROMA_DIR)).get_collection("guide")
 
     def strat_match(self, query, cond):
         q = query.lower().replace(" ", "")
@@ -53,7 +60,22 @@ class Retriever:
 
     def narrative(self, query_text, k=3):
         scores = self.bm.get_scores(tokenize(query_text))
-        top = sorted(range(len(scores)), key=lambda i: -scores[i])[:k]
+        bm_ranked = sorted(range(len(scores)), key=lambda i: -scores[i])[: k * 3]
+
+        rrf = {}
+        for rank, i in enumerate(bm_ranked):
+            rrf[i] = rrf.get(i, 0) + 1 / (60 + rank + 1)
+
+        if self.col:
+            try:
+                vec = embed([query_text])[0]
+                res = self.col.query(query_embeddings=[vec], n_results=k * 3)
+                for rank, i in enumerate(int(x) for x in res["ids"][0]):
+                    rrf[i] = rrf.get(i, 0) + 1 / (60 + rank + 1)
+            except Exception:
+                pass
+
+        top = sorted(rrf, key=lambda i: -rrf[i])[:k]
         return [{"页码": self.chunks[i]["页码"], "text": self.chunks[i]["text"][:200]} for i in top]
 
     def query(self, stage, pop, strat):
