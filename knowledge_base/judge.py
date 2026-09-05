@@ -18,7 +18,7 @@ from retrieve import Retriever
 
 API_URL = os.environ.get("HH_API_URL", "https://ai-route.huihaohealth.com/v1/chat/completions")
 API_KEY = os.environ.get("HH_API_KEY", "")
-MODEL = os.environ.get("HH_MODEL", "qwen3.8-max")
+MODEL = os.environ.get("HH_MODEL", "claude-opus-4-7-cc")
 
 REAL_MD = Path("Data_Cleaning/doc/系统输入/7例真实病例-患者基本情况与诊疗金标准.md")
 
@@ -54,7 +54,7 @@ def judge_case(case_id, body, answer):
     r = requests.post(API_URL, headers={"Authorization": f"Bearer {API_KEY}"}, json={
         "model": MODEL, "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
-    }, timeout=120)
+    }, timeout=120, proxies={"http": None, "https": None})
     r.raise_for_status()
     content = r.json()["choices"][0]["message"]["content"]
     m = re.search(r"\{.*\}", content, re.S)

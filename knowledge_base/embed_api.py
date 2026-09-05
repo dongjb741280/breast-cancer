@@ -12,7 +12,8 @@ def embed(texts, batch=32):
     out = []
     for i in range(0, len(texts), batch):
         r = requests.post(EMBED_URL, headers={"Authorization": f"Bearer {API_KEY}"},
-                          json={"model": MODEL, "input": texts[i:i + batch]}, timeout=180)
+                          json={"model": MODEL, "input": texts[i:i + batch]}, timeout=180,
+                          proxies={"http": None, "https": None})
         r.raise_for_status()
         out.extend(d["embedding"] for d in r.json()["data"])
     return out
