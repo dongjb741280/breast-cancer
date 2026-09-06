@@ -27,10 +27,11 @@ def agent_to_six(out):
     ev = [f"{r['方案']}[{r['证据类别']} p{r['来源页码']}]" for r in out.get("方案", [])]
     risks = "；".join(out.get("风险提示", [])) or "无"
     need = "；".join(out.get("需补充", [])) or "无"
+    advice = out.get("治疗建议") or ("、".join(plans) if plans else "不推荐（资料不足/待核验）")
     return [
-        f"人群={pop}" + ("" if out.get("资料充足") else "（资料不足）"),
+        out.get("人群判断") or f"人群={pop}" + ("" if out.get("资料充足") else "（资料不足）"),
         f"阶段={stage}；{strat}".strip("；"),
-        "、".join(plans) if plans else "不推荐（资料不足/待核验）",
+        advice,
         "；".join(ev) if ev else "无",
         risks,
         need,
