@@ -1,0 +1,41 @@
+%% 乳腺癌诊疗决策链（高层结构图）
+graph TD
+    A[初诊乳腺癌] --> B[影像 + 病理 + 分子标志物]
+    B --> C[TNM分期与风险分层]
+    C --> D{是否存在远处转移?}
+
+    D -->|否：早期/局部进展期| E{是否适合新辅助治疗?}
+    E -->|是| F[按分子亚型选择新辅助方案]
+    E -->|否| G[直接手术与腋窝评估]
+    F --> H[手术 + 病理反应评估]
+    G --> H
+    H --> I{pCR还是残余病灶?}
+    I -->|pCR| J[按风险完成术后辅助治疗]
+    I -->|non-pCR| K[强化术后辅助治疗]
+    J --> L[放疗 / 内分泌 / 抗HER2 / 免疫等]
+    K --> L
+
+    D -->|是：复发/转移期| M[转移灶再活检与再分型]
+    M --> N[评估既往治疗、耐药、疾病速度与患者状态]
+    N --> O[按分子亚型序贯全身治疗]
+    O --> P{特殊转移部位?}
+    P -->|骨转移| Q[骨改良药 + 局部放疗/手术评估]
+    P -->|脑转移| R[脑部局部治疗 + 全身治疗评估]
+    P -->|无| S[继续系统治疗与疗效评估]
+
+    L --> T[疗效评估、毒性管理、营养/心理支持、生活质量与MDT]
+    Q --> T
+    R --> T
+    S --> T
+    T --> U[长期随访、复发监测与临床研究/真实世界证据更新]
+
+    classDef start fill:#0f766e,stroke:#115e59,color:#fff,stroke-width:2px;
+    classDef decision fill:#fef3c7,stroke:#d97706,color:#78350f,stroke-width:2px;
+    classDef early fill:#e0f2fe,stroke:#0284c7,color:#0c4a6e;
+    classDef advanced fill:#fce7f3,stroke:#db2777,color:#831843;
+    classDef support fill:#ecfccb,stroke:#65a30d,color:#365314;
+    class A start;
+    class D,E,I,P decision;
+    class F,G,H,J,K,L early;
+    class M,N,O,Q,R,S advanced;
+    class T,U support;

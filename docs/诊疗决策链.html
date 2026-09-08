@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HER2 诊疗决策链</title>
+<style>
+  :root {
+    --bg: #F5F6F8;
+    --panel: #FFFFFF;
+    --ink: #1B1F24;
+    --muted: #5A6472;
+    --line: #D9DEE4;
+    --det: #0E7C7B;
+    --det-tint: #E7F2F1;
+    --llm: #B9770E;
+    --llm-tint: #F7EFDF;
+    --stop: #C0392B;
+    --stop-tint: #FAEAE8;
+    --slate: #5E7291;
+    --slate-tint: #EDF0F5;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: "Noto Sans SC", -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    --serif: "Noto Serif SC", "Songti SC", Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14171B; --panel: #1D2126; --ink: #E7EAEE; --muted: #9AA4B0; --line: #2A3038;
+      --det: #34A5A3; --det-tint: #1E2F2E; --llm: #D89B3A; --llm-tint: #2E2719;
+      --stop: #E06A5B; --stop-tint: #311F1C; --slate: #8CA3C4; --slate-tint: #232A33;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14171B; --panel: #1D2126; --ink: #E7EAEE; --muted: #9AA4B0; --line: #2A3038;
+    --det: #34A5A3; --det-tint: #1E2F2E; --llm: #D89B3A; --llm-tint: #2E2719;
+    --stop: #E06A5B; --stop-tint: #311F1C; --slate: #8CA3C4; --slate-tint: #232A33;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 48px 28px 72px; }
+  header .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+  h1 { font-family: var(--serif); font-weight: 700; font-size: 34px; line-height: 1.2; margin: 0 0 12px; text-wrap: balance; }
+  header p { color: var(--muted); font-size: 15px; margin: 0; max-width: 44em; }
+  figure { margin: 32px 0 0; }
+  figure svg { display: block; width: 100%; height: auto; }
+  figcaption { font-size: 13px; color: var(--muted); margin-top: 10px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 18px; margin: 24px 0 0; }
+  .legend .item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .legend .sw { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+  .points { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 24px; }
+  .points h2 { font-family: var(--serif); font-size: 20px; margin: 0 0 14px; }
+  .points ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+  .points li { position: relative; padding-left: 26px; font-size: 14.5px; }
+  .points li::before { content: ""; position: absolute; left: 0; top: 8px; width: 8px; height: 8px; border-radius: 50%; background: var(--slate); }
+  .points b { font-weight: 600; }
+  .points code { font-family: var(--mono); font-size: 12.5px; background: var(--panel); border: 1px solid var(--line); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">HER2 乳腺癌 · 诊疗决策系统 · REAL-002 走查</p>
+    <h1>诊疗决策链</h1>
+    <p>左栏是五步机制，右栏用 REAL-002 真实病例把每一步走一遍。判断层（LLM）决定「进不进决策树、资料够不够」，检索层（代码）负责「查出方案和证据」。</p>
+  </header>
+
+  <figure>
+    <svg viewBox="0 0 900 640" role="img" aria-label="诊疗决策链左右双栏图：左栏五步机制，右栏 REAL-002 实例">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+        </marker>
+        <marker id="arrSlate" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+          <path d="M0 0 L10 5 L0 10 z" fill="var(--slate)"/>
+        </marker>
+      </defs>
+
+      <!-- ===== 左栏：机制（五步） ===== -->
+      <!-- 输入 -->
+      <rect x="30" y="16" width="210" height="40" rx="8" fill="var(--panel)" stroke="var(--line)" stroke-dasharray="5 4"/>
+      <text x="135" y="40" text-anchor="middle" font-size="12.5" fill="var(--ink)">病例 JSON（脱敏）</text>
+
+      <!-- 左栏箭头 -->
+      <g stroke="currentColor" stroke-width="1.5" fill="none">
+        <line x1="135" y1="56" x2="135" y2="80" marker-end="url(#arr)"/>
+        <line x1="135" y1="134" x2="135" y2="158" marker-end="url(#arr)"/>
+        <line x1="135" y1="212" x2="135" y2="236" marker-end="url(#arr)"/>
+        <line x1="135" y1="290" x2="135" y2="314" marker-end="url(#arr)"/>
+        <line x1="135" y1="368" x2="135" y2="392" marker-end="url(#arr)"/>
+        <line x1="135" y1="446" x2="135" y2="470" marker-end="url(#arr)"/>
+      </g>
+      <!-- 箭头标签 -->
+      <g font-size="11" fill="var(--muted)" text-anchor="middle">
+        <text x="143" y="72">病例文本</text>
+        <text x="143" y="150">判断结果</text>
+        <text x="143" y="228">资料充足？是</text>
+        <text x="143" y="306">方案+证据</text>
+        <text x="143" y="384">完整回答</text>
+      </g>
+
+      <!-- ① -->
+      <rect x="30" y="84" width="210" height="50" rx="8" fill="var(--det-tint)" stroke="var(--det)" stroke-width="1.5"/>
+      <circle cx="54" cy="109" r="10" fill="var(--det)"/><text x="54" y="114" text-anchor="middle" font-size="12" fill="#fff" font-weight="700">1</text>
+      <text x="74" y="106" font-size="14" font-weight="600" fill="var(--ink)">病例抽取</text>
+      <rect x="176" y="94" width="38" height="18" rx="4" fill="var(--det)"/><text x="195" y="107" text-anchor="middle" font-size="10" fill="#fff">代码</text>
+      <text x="74" y="126" font-size="10.5" font-family="var(--mono)" fill="var(--muted)">extract_case.py</text>
+
+      <!-- ② -->
+      <rect x="30" y="162" width="210" height="50" rx="8" fill="var(--llm-tint)" stroke="var(--llm)" stroke-width="1.5"/>
+      <circle cx="54" cy="187" r="10" fill="var(--llm)"/><text x="54" y="192" text-anchor="middle" font-size="12" fill="#fff" font-weight="700">2</text>
+      <text x="74" y="184" font-size="14" font-weight="600" fill="var(--ink)">判断推导</text>
+      <rect x="176" y="172" width="38" height="18" rx="4" fill="var(--llm)"/><text x="195" y="185" text-anchor="middle" font-size="10" fill="#fff">LLM</text>
+      <text x="74" y="204" font-size="10.5" font-family="var(--mono)" fill="var(--muted)">agent.derive</text>
+
+      <!-- ③ -->
+      <rect x="30" y="240" width="210" height="50" rx="8" fill="var(--det-tint)" stroke="var(--det)" stroke-width="1.5"/>
+      <circle cx="54" cy="265" r="10" fill="var(--det)"/><text x="54" y="270" text-anchor="middle" font-size="12" fill="#fff" font-weight="700">3</text>
+      <text x="74" y="262" font-size="14" font-weight="600" fill="var(--ink)">知识检索</text>
+      <rect x="176" y="250" width="38" height="18" rx="4" fill="var(--det)"/><text x="195" y="263" text-anchor="middle" font-size="10" fill="#fff">代码</text>
+      <text x="74" y="282" font-size="10.5" font-family="var(--mono)" fill="var(--muted)">retrieve.py</text>
+
+      <!-- ④ -->
+      <rect x="30" y="318" width="210" height="50" rx="8" fill="var(--det-tint)" stroke="var(--det)" stroke-width="1.5"/>
+      <circle cx="54" cy="343" r="10" fill="var(--det)"/><text x="54" y="348" text-anchor="middle" font-size="12" fill="#fff" font-weight="700">4</text>
+      <text x="74" y="340" font-size="14" font-weight="600" fill="var(--ink)">合成输出</text>
+      <rect x="176" y="328" width="38" height="18" rx="4" fill="var(--det)"/><text x="195" y="341" text-anchor="middle" font-size="10" fill="#fff">代码</text>
+      <text x="74" y="360" font-size="10.5" font-family="var(--mono)" fill="var(--muted)">agent.run</text>
+
+      <!-- ⑤ -->
+      <rect x="30" y="396" width="210" height="50" rx="8" fill="var(--llm-tint)" stroke="var(--llm)" stroke-width="1.5"/>
+      <circle cx="54" cy="421" r="10" fill="var(--llm)"/><text x="54" y="426" text-anchor="middle" font-size="12" fill="#fff" font-weight="700">5</text>
+      <text x="74" y="418" font-size="14" font-weight="600" fill="var(--ink)">评测打分</text>
+      <rect x="176" y="406" width="38" height="18" rx="4" fill="var(--llm)"/><text x="195" y="419" text-anchor="middle" font-size="10" fill="#fff">LLM</text>
+      <text x="74" y="438" font-size="10.5" font-family="var(--mono)" fill="var(--muted)">judge</text>
+
+      <!-- 输出 -->
+      <rect x="30" y="474" width="210" height="40" rx="8" fill="var(--panel)" stroke="var(--line)"/>
+      <text x="135" y="499" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--ink)">六项 0-2 分</text>
+
+      <!-- 左→右 虚线配对 -->
+      <g stroke="var(--slate)" stroke-width="1.2" stroke-dasharray="3 3">
+        <line x1="240" y1="109" x2="318" y2="109" marker-end="url(#arrSlate)"/>
+        <line x1="240" y1="187" x2="318" y2="187" marker-end="url(#arrSlate)"/>
+        <line x1="240" y1="265" x2="318" y2="265" marker-end="url(#arrSlate)"/>
+        <line x1="240" y1="343" x2="318" y2="343" marker-end="url(#arrSlate)"/>
+        <line x1="240" y1="421" x2="318" y2="421" marker-end="url(#arrSlate)"/>
+      </g>
+
+      <!-- ===== 右栏：REAL-002 实例 ===== -->
+      <rect x="322" y="16" width="548" height="40" rx="8" fill="var(--panel)" stroke="var(--line)"/>
+      <text x="342" y="40" font-size="12.5" fill="var(--muted)">REAL-002 · 女 63 岁 · 双侧乳腺 · 右肝骨转移（脱敏病历）</text>
+
+      <rect x="322" y="84" width="548" height="50" rx="8" fill="var(--panel)" stroke="var(--line)"/>
+      <text x="342" y="105" font-size="12.5" fill="var(--ink)">诊断：乳腺外上象限恶性肿瘤、肝继发恶性肿瘤</text>
+      <text x="342" y="125" font-size="12.5" fill="var(--ink)">入院记录：右乳 ER(-) PR(-) <tspan fill="var(--stop)" font-weight="600">HER-2(3+)</tspan>；左乳 HER-2 2+ FISH 未扩增</text>
+
+      <rect x="322" y="162" width="548" height="50" rx="8" fill="var(--panel)" stroke="var(--line)"/>
+      <text x="342" y="183" font-size="12.5" fill="var(--ink)">人群 = HER2+（右侧）；左侧 FISH 未扩增，不混用</text>
+      <text x="342" y="203" font-size="12.5" fill="var(--ink)">阶段 = 晚期解救 · 分层 = 一线/维持 · 资料充足 = true</text>
+
+      <rect x="322" y="240" width="548" height="50" rx="8" fill="var(--panel)" stroke="var(--line)"/>
+      <text x="342" y="261" font-size="12.5" fill="var(--ink)">查询：晚期解救 + HER2+ + 曲妥珠单抗敏感</text>
+      <text x="342" y="281" font-size="12.5" fill="var(--ink)">→ THP Ⅰ/1A · TH+吡咯替尼 Ⅰ/1A · T-DXd Ⅰ/1A</text>
+
+      <rect x="322" y="318" width="548" height="50" rx="8" fill="var(--panel)" stroke="var(--line)"/>
+      <text x="342" y="339" font-size="12.5" fill="var(--ink)">「进入 HER2+ 晚期评估，结合既往治疗和双侧受体差异</text>
+      <text x="342" y="359" font-size="12.5" fill="var(--ink)">由 MDT 确认」+ 方案清单（方案 / 等级 / 证据）</text>
+
+      <rect x="322" y="396" width="548" height="50" rx="8" fill="var(--panel)" stroke="var(--line)"/>
+      <text x="342" y="417" font-size="12.5" fill="var(--ink)">vs 金标准（右侧 HER2+、左侧 FISH 未扩增）</text>
+      <text x="342" y="437" font-size="12.5" fill="var(--ink)">→ 人群判断 / 治疗线 / 治疗建议 / 证据 / 风险 / 补充 逐项 0-2 分</text>
+
+      <rect x="322" y="474" width="548" height="40" rx="8" fill="var(--panel)" stroke="var(--line)"/>
+      <text x="342" y="499" font-size="12.5" fill="var(--muted)">总分 X/12 · 判定（通过 / 人工复核 / 不通过）</text>
+
+      <!-- ===== 底部注解 ===== -->
+      <rect x="30" y="560" width="410" height="56" rx="8" fill="var(--stop-tint)" stroke="var(--stop)" stroke-width="1.5"/>
+      <text x="50" y="583" font-size="12.5" font-weight="600" fill="var(--stop)">② 资料充足 = false → 停手</text>
+      <text x="50" y="603" font-size="11.5" fill="var(--muted)">输出「需补充 XX」，这是正确结果，不是失败</text>
+
+      <rect x="460" y="560" width="410" height="56" rx="8" fill="var(--slate-tint)" stroke="var(--slate)" stroke-width="1.5" stroke-dasharray="5 4"/>
+      <text x="480" y="583" font-size="12.5" font-weight="600" fill="var(--ink)">离线构建（跑一次）</text>
+      <text x="480" y="603" font-size="11" font-family="var(--mono)" fill="var(--muted)">guide.md → extract/graph/bm25+embed → 检索索引 · 金标准 xlsx</text>
+    </svg>
+    <figcaption>左栏是五步机制（①③④ 代码、②⑤ LLM），右栏是 REAL-002 在每一步的真实输入输出，虚线箭头配对。② 判断「资料充足=false」时停手（底部红框）。</figcaption>
+  </figure>
+
+  <div class="legend">
+    <div class="item"><span class="sw" style="background:var(--det)"></span>确定性代码（抽取 / 检索 / 合成）</div>
+    <div class="item"><span class="sw" style="background:var(--llm)"></span>LLM 判断（推导 / 评测）</div>
+    <div class="item"><span class="sw" style="background:var(--stop)"></span>停手（资料不足）</div>
+    <div class="item"><span class="sw" style="background:var(--slate)"></span>离线数据 / 金标准</div>
+  </div>
+
+  <section class="points">
+    <h2>三个容易混淆的点</h2>
+    <ol>
+      <li><b>检索不判断，判断才检索。</b>③ 的知识检索永远返回方案，不判断「该不该给」。② 的 LLM 先决定进不进决策树、资料够不够，够才调 ③。光有检索 ≠ 能回答临床问题。</li>
+      <li><b>「资料不足」是正确答案。</b>② 里 <code>资料充足=false</code> 时走「否」分支停手，输出「需补充 XX」——评测按满分算，不是 0 分。</li>
+      <li><b>两条链路分开。</b>「离线构建」（<code>guide.md → 索引</code>）只跑一次、是确定性代码；「在线推理」五步每次病例跑一遍，其中 ②⑤ 调 LLM。</li>
+    </ol>
+  </section>
+</div>
+</body>
+</html>
