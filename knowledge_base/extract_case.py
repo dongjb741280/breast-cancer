@@ -16,7 +16,13 @@ def extract_case_text(path):
     pd = json.load(open(path, encoding="utf-8"))["patient_data"]
     parts = []
     sp = pd.get("standard_patient") or {}
-    parts.append(f"性别:{sp.get('standard_gender', '')} 年龄:{sp.get('standard_age', '')}")
+    gender = sp.get("standard_gender", "")
+    age = ""
+    for x in pd.get("diagnosis", []):
+        if x.get("standard_age") is not None or x.get("original_age") is not None:
+            age = x.get("standard_age") or x.get("original_age")
+            break
+    parts.append(f"性别:{gender} 年龄:{age}")
 
     diags = []
     for x in pd.get("diagnosis", []):
