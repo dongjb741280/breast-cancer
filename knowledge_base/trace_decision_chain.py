@@ -134,15 +134,33 @@ def extract(pd):
     tnm_latest = tnms[-1] if tnms else ""
     stage_latest = stages[-1] if stages else ""
 
-    # 分子标志物（原始 IHC 证据）
-    def _find(p):
-        mm = re.search(p, text)
-        return mm.group(0) if mm else ""
+    # 分子标志物（原始 IHC 证据，兼容括号/加号/自由文本）
+    def _find_any(patterns):
+        for p in patterns:
+            mm = re.search(p, text)
+            if mm:
+                return mm.group(0)
+        return ""
 
-    er = _find(r"(?<!H)ER[^，。;；()（）]{0,3}[（(][^）)]*[）)]")
-    pr = _find(r"PR[^，。;；()（）]{0,3}[（(][^）)]*[）)]")
-    her2 = _find(r"HER-?2\s*[（(][^）)]*[）)]")
-    ki67 = _find(r"[Kk]i-?67\s*[（(][^）)]*[）)]") or _find(r"[Kk]i-?67\s*\d+%")
+    er = _find_any([
+        r"(?<!H)ER[^，。;；()（）]{0,3}[（(][^）)]*[）)]",   # ER(90%) / ER(++)
+        r"(?<!H)ER\s*/\s*PR[^。；，;]{0,8}(阳性|强阳)",    # ER/PR约85%阳性
+        r"(?<!H)ER[^。；，;]{0,6}(阳性|强阳)",              # ER阳性
+    ])
+    pr = _find_any([
+        r"PR[^，。;；()（）]{0,3}[（(][^）)]*[）)]",        # PR(80%) / PR小灶(+)
+        r"PR[^。；，;]{0,8}(阳性|强阳)",                     # PR约85%阳性
+    ])
+    her2 = _find_any([
+        r"HER-?2\s*[（(][^）)]*[）)]",                      # HER2(3+)
+        r"CerbB-?2\s*[（(][^）)]*[）)]",                     # CerbB-2(+)
+        r"HER-?2\s*(?:IHC\s*)?\d\+",                        # HER2 IHC 1+
+        r"HER-?2\s*(阴性|阳性)",                             # HER2阴性
+    ])
+    ki67 = _find_any([
+        r"[Kk]i-?67\s*[（(][^）)]*[）)]",                  # Ki67(30%)
+        r"[Kk]i-?67\s*约?\s*\d+\s*%",                       # Ki67 30% / Ki67约20%
+    ])
     fish = ""
     if re.search(r"FISH[^。；]*扩增\s*阴性|FISH[^。；]*阴性", text):
         fish = "FISH扩增阴性"
