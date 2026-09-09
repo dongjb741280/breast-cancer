@@ -1,5 +1,5 @@
 graph TD
-    TITLE["REAL-003：HER2低表达（HR-）<br/>M分期待核实，临床按 M0 新辅助 → non-pCR → 强化辅助"]
+    TITLE["REAL-003：HER2低表达（ER- / PR- / HER2 IHC 1+ / Ki67 20%）<br/>ypT2N1a RCB-II，肺结节待核实"]
     A[初诊乳腺癌]
     B[影像 + 病理 + 分子标志物<br/>（ER/PR/HER2/Ki67/FISH、BRCA1/2、PD-L1 CPS、绝经）]
     C[TNM分期 + 分子分型与风险分层<br/>HER2阳性 / 低表达 / 超低表达 / 三阴性 / HR阳性]
@@ -26,14 +26,14 @@ graph TD
     A --> B
     B --> C
     C --> D
-    D -->|否：M0 早期/局部进展期| E
-    E -->|是| F
+    D -->|否：M0（肺结节待核实，按M0）| E
+    E -->|是（术前白蛋白紫杉醇+卡铂）| F
     E -->|否| G
     F --> H
     G --> J
     H --> I
     I -->|pCR| J
-    I -->|non-pCR| K
+    I -->|non-pCR（RCB-II 残余病灶）| K
     J --> L
     K --> L
     D -->|是：M1 复发/转移期| M
