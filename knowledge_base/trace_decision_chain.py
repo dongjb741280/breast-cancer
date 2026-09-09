@@ -1,6 +1,7 @@
-"""确定性决策链追踪：病历 JSON → 抽取特征 → 逐节点走通诊疗决策链。
+"""决策链追踪：病历 JSON → 抽取特征 → 逐节点走通诊疗决策链。
 
-不依赖 LLM，纯规则。输入为「系统输入」目录下的标准病历 JSON，
+特征抽取优先走 LLM（见 llm.py，需 HH_API_KEY），LLM 不可用时回退正则兜底。
+输入为「系统输入」目录下的标准病历 JSON，
 输出一条 A→U 的决策链路径（节点 + 病历证据 + 分支选择），
 并可（--diagram）生成高亮该病例实际路径的 mermaid 源文件。
 
@@ -117,15 +118,88 @@ def _extract_tx(text):
     return {"当前": sorted(cur), "既往": sorted(past - cur)}
 
 
-def extract(pd):
-    sp = pd.get("standard_patient") or {}
-    gender = sp.get("standard_gender", "")
-    age = next((x.get("standard_age") or x.get("original_age")
-                for x in pd.get("diagnosis", []) if x.get("standard_age") is not None), "")
+LLM_SCHEMA = """{
+  "分子分型": "HER2阳性型 | HER2低表达型 | 三阴性 | HR阳性/HER2阴性 | HR阳性(Luminal) | 未知",
+  "ER": "原文证据，如 ER(90%,3+) / ER/PR约85%阳性 / ER(-)，缺省给 -",
+  "PR": "原文证据，如 PR(40%,2+) / PR小灶(+) / PR约85%阳性，缺省给 -",
+  "HER2": "原文证据，如 HER-2(3+) / HER2 IHC 1+ / CerbB-2(+) / HER2阴性，缺省给 -",
+  "Ki67": "原文证据，如 Ki67(30%) / Ki67约20%，缺省给 -",
+  "FISH": "FISH扩增阳性 | FISH扩增阴性 | -",
+  "初始TNM": "最早一次 TNM，如 cT2N2M1 / pT2N1M0，缺省空字符串",
+  "初始分期": "最早一次分期，如 Ⅳ期 / IIB期，缺省空字符串",
+  "当前TNM": "最近一次 TNM（复发/转移后常为 M1），缺省空字符串",
+  "当前分期": "最近一次分期，缺省空字符串",
+  "转移部位": ["肝","骨","脑","肺","肾上腺","胸膜"]，无转移给空数组",
+  "是否远处转移": true,
+  "M分期待核实": false,
+  "是否新辅助": false,
+  "是否手术": true,
+  "pCR": null,
+  "non_pCR": null,
+  "当前治疗": ["抗HER2靶向","内分泌","化疗","放疗","骨改良药"]，无给空数组",
+  "既往治疗": ["抗HER2靶向","内分泌","化疗","放疗","骨改良药"]，无给空数组"
+}"""
 
-    text = _narrative(pd)
-    diags = _diagnoses(pd)
 
+def _normalize_llm(d):
+    """把 LLM 返回的字段规整成内部结构，容忍缺省/类型差异。"""
+    def s(k):
+        v = d.get(k)
+        return v if isinstance(v, str) else ("" if v is None else str(v))
+
+    def b(k):
+        v = d.get(k)
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, str):
+            return v.strip().lower() in ("true", "是", "yes", "1", "阳性", "有")
+        return bool(v)
+
+    def lst(k):
+        v = d.get(k)
+        if isinstance(v, list):
+            return [str(x) for x in v]
+        if isinstance(v, str) and v.strip():
+            return [v.strip()]
+        return []
+
+    sites = lst("转移部位")
+    return {
+        "subtype": s("分子分型") or "未知",
+        "er": s("ER"), "pr": s("PR"), "her2": s("HER2"), "ki67": s("Ki67"), "fish": s("FISH"),
+        "tnm": s("初始TNM"), "stage": s("初始分期"),
+        "tnm_latest": s("当前TNM"), "stage_latest": s("当前分期"),
+        "sites": sites,
+        "m1": b("是否远处转移") or bool(sites),
+        "m_uncertain": b("M分期待核实"),
+        "neoadjuvant": b("是否新辅助"), "surgery": b("是否手术"),
+        "pcr": b("pCR"), "non_pcr": b("non_pCR"),
+        "tx": {"当前": lst("当前治疗"), "既往": lst("既往治疗")},
+    }
+
+
+def _extract_llm(text):
+    """LLM 抽取结构化特征（优先，替代正则）。"""
+    from llm import chat  # 懒加载：无 requests/HH_API_KEY 时由正则兜底
+    prompt = f"""你是乳腺癌诊疗决策链的特征抽取器。从病历摘要中提取结构化字段，只输出一个 JSON 对象（不要解释、不要 markdown 代码块）。
+
+病历摘要：
+{text}
+
+字段（严格按此结构；缺省给 null 或空）：
+{LLM_SCHEMA}
+
+判定要点：
+- 分子分型按指南：HER2 IHC 3+ 或 FISH/ISH 扩增→HER2阳性型；IHC 1+ 或 2+/FISH阴性→HER2低表达型；ER/PR≥1%→HR阳性；ER- PR- HER2阴性→三阴性；诊断结论写 Luminal 则→HR阳性(Luminal)。
+- 双侧乳腺或原发灶/转移灶受体不一致时，以驱动治疗的主导病灶为准，并在 ER/PR/HER2 证据里注明「原发…/转移灶…」。
+- 初始TNM/分期=最早记录；当前TNM/分期=最近记录（复发/转移后常为 M1/IV期）。
+- 治疗分当前/既往：当前=至今/维持/继续/目前/现给予；既往=术后/序贯/年份/曾/外院。知情同意书里的备选方案、随访模板文字不算。
+- 不要编造，病历未提及就留空或给 null。"""
+    return _normalize_llm(chat(prompt))
+
+
+def _extract_regex(text, diags):
+    """正则兜底的特征抽取（LLM 不可用时）。"""
     # TNM + 分期（区分初始/当前）；MO→M0 纠正 OCR 误写
     tnms = [t.replace("MO", "M0") for t in re.findall(r"[cpay]?T[0-9xXO]N[0-9xXO]M[0-9xXO]", text)]
     stages = re.findall(r"(?:IV|Ⅳ|Ⅲ|III|Ⅱ|II|Ⅰ|I)A?B?C?期", text)
@@ -256,13 +330,28 @@ def extract(pd):
     tx = _extract_tx(text)
 
     return {
-        "gender": gender, "age": age, "tnm": tnm, "stage": stage,
-        "tnm_latest": tnm_latest, "stage_latest": stage_latest,
+        "tnm": tnm, "stage": stage, "tnm_latest": tnm_latest, "stage_latest": stage_latest,
         "subtype": subtype, "er": er, "pr": pr, "her2": her2, "ki67": ki67, "fish": fish,
-        "sites": sites, "m1": m1, "tx": tx, "diags": diags, "text": text,
+        "sites": sites, "m1": m1, "m_uncertain": m_uncertain, "tx": tx,
         "neoadjuvant": neoadjuvant, "surgery": surgery, "pcr": pcr, "non_pcr": non_pcr,
-        "m_uncertain": m_uncertain,
     }
+
+
+def extract(pd):
+    """结构化字段（性别/年龄/诊断）+ 叙事特征（LLM 优先，正则兜底）。"""
+    sp = pd.get("standard_patient") or {}
+    gender = sp.get("standard_gender", "")
+    age = next((x.get("standard_age") or x.get("original_age")
+                for x in pd.get("diagnosis", []) if x.get("standard_age") is not None), "")
+    text = _narrative(pd)
+    diags = _diagnoses(pd)
+
+    try:
+        feat = _extract_llm(text)
+    except Exception:
+        feat = _extract_regex(text, diags)
+
+    return {"gender": gender, "age": age, "diags": diags, "text": text, **feat}
 
 
 def _staging(f):
