@@ -48,7 +48,7 @@ EDGES = [
     ("A", "B", ""), ("B", "C", ""), ("C", "D", ""),
     ("D", "E", "否：M0 早期/局部进展期"),
     ("E", "F", "是"), ("E", "G", "否"),
-    ("F", "H", ""), ("G", "H", ""),
+    ("F", "H", ""), ("G", "J", ""),
     ("H", "I", ""),
     ("I", "J", "pCR"), ("I", "K", "non-pCR"),
     ("J", "L", ""), ("K", "L", ""),
@@ -67,14 +67,17 @@ def load_case(case_id):
 
 
 def _narrative(pd):
-    """拼接叙事文本，优先入院/出院/首次病程记录。"""
+    """拼接叙事文本（入院/病程/出院/摘要等），排除知情同意类模板。"""
     docs = pd.get("standard_inpatient_documentations", [])
     picked = []
     for doc in docs:
         name = doc.get("standard_record_item_name") or doc.get("record_item_name") or ""
         rt = doc.get("record_text") or doc.get("original_record_text") or ""
-        if rt and any(k in name for k in ("入院记录", "首次病程", "出院记录", "出院小结")):
-            picked.append(rt)
+        if not rt:
+            continue
+        if any(k in name for k in ("知情", "告知", "同意", "委托", "授权", "确认", "证明", "首页")):
+            continue
+        picked.append(rt)
     return "\n".join(picked)
 
 
@@ -109,10 +112,10 @@ def extract(pd):
         mm = re.search(p, text)
         return mm.group(0) if mm else ""
 
-    er = _find(r"ER\s*\([^)]*\)") or _find(r"ER[（(][^）)]*[）)]")
-    pr = _find(r"PR\s*\([^)]*\)") or _find(r"PR[（(][^）)]*[）)]")
-    her2 = _find(r"HER-?2\s*\([^)]*\)")
-    ki67 = _find(r"[Kk]i-?67\s*\([^)]*\)")
+    er = _find(r"(?<!H)ER[^，。;；()（）]{0,3}[（(][^）)]*[）)]")
+    pr = _find(r"PR[^，。;；()（）]{0,3}[（(][^）)]*[）)]")
+    her2 = _find(r"HER-?2\s*[（(][^）)]*[）)]")
+    ki67 = _find(r"[Kk]i-?67\s*[（(][^）)]*[）)]") or _find(r"[Kk]i-?67\s*\d+%")
     fish = ""
     if re.search(r"FISH[^。；]*扩增\s*阴性|FISH[^。；]*阴性", text):
         fish = "FISH扩增阴性"
@@ -121,8 +124,27 @@ def extract(pd):
 
     # 分子分型（优先读诊断结论，其次按 IHC 规则判读）
     def _pos(s):
-        m = re.search(r"(\d+)", s or "")
+        # ER/PR 阳性：含 + 号，或数字 ≥1（% / 分）
+        if not s:
+            return False
+        if "+" in s:
+            return True
+        m = re.search(r"(\d+)", s)
         return bool(m) and int(m.group(1)) >= 1
+
+    def _her2_level(s):
+        # +++/3+ → 3；++/2+ → 2；+/1+ → 1；-/0 → 0
+        if not s:
+            return None
+        raw = re.search(r"[（(]([^）)]*)[）)]", s)
+        raw = raw.group(1) if raw else s
+        if re.search(r"\+\+\+", raw) or re.search(r"3\+", raw):
+            return 3
+        if re.search(r"\+\+", raw) or re.search(r"2\+", raw):
+            return 2
+        if re.search(r"\+", raw) or re.search(r"1\+", raw):
+            return 1
+        return 0
 
     subtype = ""
     for kw, label in (("HER2阳性型", "HER2阳性型"), ("HER2低表达", "HER2低表达型"),
@@ -131,19 +153,18 @@ def extract(pd):
             subtype = label
             break
     if not subtype:
-        h = re.search(r"HER-?2\s*[（(](\d)\+[）)]", text)
-        if h:
-            ihc = h.group(1)
-            if ihc == "3":
+        if "扩增阳性" in fish or "ISH阳性" in fish:
+            subtype = "HER2阳性型"
+        else:
+            lv = _her2_level(her2)
+            if lv == 3:
                 subtype = "HER2阳性型"
-            elif ihc == "2":
+            elif lv == 2:
                 subtype = "HER2阳性型" if "扩增阳性" in fish else ("HER2低表达型" if "阴性" in fish else "HER2待核验(IHC2+)")
-            elif ihc == "1":
+            elif lv == 1:
                 subtype = "HER2低表达型"
-            else:  # IHC 0
+            else:  # HER2 阴性（- / 0 / 0分）
                 subtype = "三阴性" if not (_pos(er) or _pos(pr)) else "HR阳性/HER2阴性"
-        else:  # HER2 阴性（“-”/“阴性”/“0分”等）
-            subtype = "三阴性" if not (_pos(er) or _pos(pr)) else "HR阳性/HER2阴性"
 
     # 转移部位：只在「X继发恶性肿瘤 / X转移」语境下命中，避免误伤体检/正常描述
     sites = []
@@ -154,6 +175,13 @@ def extract(pd):
             sites.append(site)
 
     m1 = "M1" in tnm or stage.startswith("IV") or "Ⅳ" in stage or bool(sites)
+    m_uncertain = (not m1) and bool(re.search(r"疑似转移|转移[^。；，)]{0,6}待", blob))
+
+    # 早期阶段处理方式
+    neoadjuvant = bool(re.search(r"新辅助", text))
+    surgery = bool(re.search(r"切除术|根治术|保乳术|前哨淋巴结活检|腋窝淋巴结清扫|全乳切除", text))
+    pcr = bool(re.search(r"pCR|病理学完全缓解|MP\s*5\s*级|RCB\s*0", text))
+    non_pcr = bool(re.search(r"non-?pCR|非pCR|未达pCR|未达病理学完全缓解|残余病灶|RCB\s*[IⅡⅢ]", text))
 
     # 治疗
     tx = []
@@ -172,6 +200,8 @@ def extract(pd):
         "gender": gender, "age": age, "tnm": tnm, "stage": stage,
         "subtype": subtype, "er": er, "pr": pr, "her2": her2, "ki67": ki67, "fish": fish,
         "sites": sites, "m1": m1, "tx": tx, "diags": diags, "text": text,
+        "neoadjuvant": neoadjuvant, "surgery": surgery, "pcr": pcr, "non_pcr": non_pcr,
+        "m_uncertain": m_uncertain,
     }
 
 
@@ -183,6 +213,7 @@ def trace(f):
     steps.append(("C", f"{f['tnm']} {f['stage']}".strip(), ""))
 
     path = ["A", "B", "C"]
+    resolved = True
     if f["m1"]:
         steps.append(("D", "存在远处转移", f"是：M1（{ '、'.join(f['sites']) or '见病历' }）"))
         steps.append(("M", "转移灶/原发灶再活检 + 再分型", ""))
@@ -200,15 +231,43 @@ def trace(f):
         if any(s in f["sites"] for s in ("肝", "肺")) or not f["sites"]:
             steps.append(("S", "其他内脏/软组织转移 → 继续系统治疗", "其他内脏转移"))
             path.append("S")
+    elif f.get("m_uncertain"):
+        steps.append(("D", "M分期待核实（疑似转移，需活检/PET确认）", "待核实"))
+        path.append("D")
+        resolved = False
     else:
         steps.append(("D", "无远处转移", "否：M0 早期/局部进展期"))
         steps.append(("E", "是否适合新辅助治疗（肿块大/LN+/HER2+/三阴/保乳意愿）", ""))
-        # 早期路径无法仅凭结构化字段确定，给出分支提示即可
         path += ["D", "E"]
+        if f["neoadjuvant"]:
+            steps.append(("F", "按分子亚型选择新辅助方案", "是"))
+            steps.append(("H", "手术 + 病理反应评估", ""))
+            path += ["F", "H"]
+            if f["pcr"]:
+                steps.append(("I", "达到病理学完全缓解", "pCR"))
+                steps.append(("J", "按风险完成术后辅助治疗", ""))
+                path += ["I", "J"]
+            elif f["non_pcr"]:
+                steps.append(("I", "残余病灶", "non-pCR"))
+                steps.append(("K", "强化辅助（HER2+/三阴）", ""))
+                path += ["I", "K"]
+            else:
+                steps.append(("I", "pCR/non-pCR 需病理反应记录（MP/RCB/ypTNM）", ""))
+                path.append("I")
+            steps.append(("L", "放疗 / 内分泌 / 抗HER2 / 免疫等", ""))
+            path.append("L")
+        elif f["surgery"]:
+            steps.append(("G", "直接手术 + 腋窝评估", "否"))
+            steps.append(("J", "按风险完成术后辅助治疗", ""))
+            steps.append(("L", "放疗 / 内分泌 / 抗HER2 / 免疫等", ""))
+            path += ["G", "J", "L"]
+        else:
+            resolved = False
 
-    steps.append(("T", "疗效评估、毒性管理、营养/心理支持、MDT", ""))
-    steps.append(("U", "长期随访、复发监测", ""))
-    path += ["T", "U"]
+    if resolved:
+        steps.append(("T", "疗效评估、毒性管理、营养/心理支持、MDT", ""))
+        steps.append(("U", "长期随访、复发监测", ""))
+        path += ["T", "U"]
 
     # 由 path_nodes 推导走的边（按 EDGES 顺序匹配相邻节点）
     edges = []

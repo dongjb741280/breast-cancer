@@ -1760,8 +1760,8 @@
       "type": "arrow",
       "x": 480,
       "y": 752,
-      "width": 130,
-      "height": 68,
+      "width": 330,
+      "height": 358,
       "angle": 0,
       "strokeColor": "#374151",
       "backgroundColor": "#fff",
@@ -1789,8 +1789,8 @@
           "y": 0
         },
         {
-          "x": -155,
-          "y": 68
+          "x": -330,
+          "y": 358
         }
       ],
       "endArrowhead": "arrow"
