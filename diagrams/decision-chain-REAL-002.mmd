@@ -1,0 +1,96 @@
+%% 乳腺癌诊疗决策链（高亮病例实际路径）
+graph TD
+    A[初诊乳腺癌]
+    B[影像 + 病理 + 分子标志物]
+    C[TNM分期与风险分层]
+    D{M分期：有无远处转移?}
+    E{是否适合新辅助治疗?}
+    F[按分子亚型选择新辅助方案]
+    G[直接手术与腋窝评估]
+    H[手术 + 病理反应评估]
+    I{pCR还是残余病灶?}
+    J[按风险完成术后辅助治疗]
+    K[强化辅助（HER2+/三阴）<br/>T-DM1 / 卡培他滨 / 奥拉帕利<br/>HR+：按风险辅助]
+    L[放疗 / 内分泌 / 抗HER2 / 免疫等]
+    M[转移灶再活检与再分型]
+    N[评估既往治疗、耐药、疾病速度与患者状态]
+    O[按分子亚型序贯全身治疗<br/>HER2阳性 / HER2低表达<br/>三阴性 / HR阳性]
+    P{特殊转移部位?}
+    Q[骨改良药 + 局部放疗/手术评估]
+    R[脑部局部治疗 + 全身治疗评估]
+    S[继续系统治疗与疗效评估]
+    T[疗效评估、毒性管理、营养/心理支持、生活质量与MDT]
+    U[长期随访、复发监测与临床研究/真实世界证据更新]
+    A --> B
+    B --> C
+    C --> D
+    D -->|否：M0 早期/局部进展期| E
+    E -->|是| F
+    E -->|否| G
+    F --> H
+    G --> H
+    H --> I
+    I -->|pCR| J
+    I -->|non-pCR| K
+    J --> L
+    K --> L
+    D -->|是：M1 复发/转移期| M
+    M --> N
+    N --> O
+    O --> P
+    P -->|骨转移| Q
+    P -->|脑转移| R
+    P -->|其他内脏/软组织转移| S
+    L --> T
+    Q --> T
+    R --> T
+    S --> T
+    T --> U
+    classDef path fill:#fca5a5,stroke:#dc2626,color:#7f1d1d,stroke-width:3px;
+    classDef dim fill:#f3f4f6,stroke:#d1d5db,color:#9ca3af,stroke-width:1px;
+    class A path;
+    class B path;
+    class C path;
+    class D path;
+    class E dim;
+    class F dim;
+    class G dim;
+    class H dim;
+    class I dim;
+    class J dim;
+    class K dim;
+    class L dim;
+    class M path;
+    class N path;
+    class O path;
+    class P path;
+    class Q path;
+    class R dim;
+    class S path;
+    class T path;
+    class U path;
+    linkStyle 0 stroke:#dc2626,stroke-width:3px;
+    linkStyle 1 stroke:#dc2626,stroke-width:3px;
+    linkStyle 2 stroke:#dc2626,stroke-width:3px;
+    linkStyle 3 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 4 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 5 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 6 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 7 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 8 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 9 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 10 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 11 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 12 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 13 stroke:#dc2626,stroke-width:3px;
+    linkStyle 14 stroke:#dc2626,stroke-width:3px;
+    linkStyle 15 stroke:#dc2626,stroke-width:3px;
+    linkStyle 16 stroke:#dc2626,stroke-width:3px;
+    linkStyle 17 stroke:#dc2626,stroke-width:3px;
+    linkStyle 18 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 19 stroke:#dc2626,stroke-width:3px;
+    linkStyle 20 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 21 stroke:#dc2626,stroke-width:3px;
+    linkStyle 22 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 23 stroke:#dc2626,stroke-width:3px;
+    linkStyle 24 stroke:#dc2626,stroke-width:3px;
