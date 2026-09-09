@@ -1,5 +1,5 @@
-%% 乳腺癌诊疗决策链（高亮病例实际路径）
 graph TD
+    TITLE["REAL-003：HER2低表达（HR-）<br/>M分期待核实，临床按 M0 新辅助 → non-pCR → 强化辅助"]
     A[初诊乳腺癌]
     B[影像 + 病理 + 分子标志物]
     C[TNM分期与风险分层]
@@ -46,20 +46,23 @@ graph TD
     R --> T
     S --> T
     T --> U
+    TITLE ~~~ A
     classDef path fill:#fca5a5,stroke:#dc2626,color:#7f1d1d,stroke-width:3px;
     classDef dim fill:#f3f4f6,stroke:#d1d5db,color:#9ca3af,stroke-width:1px;
+    classDef caption fill:#fff,stroke:none,color:#111827,font-weight:bold;
+    class TITLE caption;
     class A path;
     class B path;
     class C path;
     class D path;
-    class E dim;
-    class F dim;
+    class E path;
+    class F path;
     class G dim;
-    class H dim;
-    class I dim;
+    class H path;
+    class I path;
     class J dim;
-    class K dim;
-    class L dim;
+    class K path;
+    class L path;
     class M dim;
     class N dim;
     class O dim;
@@ -67,21 +70,21 @@ graph TD
     class Q dim;
     class R dim;
     class S dim;
-    class T dim;
-    class U dim;
+    class T path;
+    class U path;
     linkStyle 0 stroke:#dc2626,stroke-width:3px;
     linkStyle 1 stroke:#dc2626,stroke-width:3px;
     linkStyle 2 stroke:#dc2626,stroke-width:3px;
-    linkStyle 3 stroke:#d1d5db,stroke-width:1px;
-    linkStyle 4 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 3 stroke:#dc2626,stroke-width:3px;
+    linkStyle 4 stroke:#dc2626,stroke-width:3px;
     linkStyle 5 stroke:#d1d5db,stroke-width:1px;
-    linkStyle 6 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 6 stroke:#dc2626,stroke-width:3px;
     linkStyle 7 stroke:#d1d5db,stroke-width:1px;
-    linkStyle 8 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 8 stroke:#dc2626,stroke-width:3px;
     linkStyle 9 stroke:#d1d5db,stroke-width:1px;
-    linkStyle 10 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 10 stroke:#dc2626,stroke-width:3px;
     linkStyle 11 stroke:#d1d5db,stroke-width:1px;
-    linkStyle 12 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 12 stroke:#dc2626,stroke-width:3px;
     linkStyle 13 stroke:#d1d5db,stroke-width:1px;
     linkStyle 14 stroke:#d1d5db,stroke-width:1px;
     linkStyle 15 stroke:#d1d5db,stroke-width:1px;
@@ -89,8 +92,8 @@ graph TD
     linkStyle 17 stroke:#d1d5db,stroke-width:1px;
     linkStyle 18 stroke:#d1d5db,stroke-width:1px;
     linkStyle 19 stroke:#d1d5db,stroke-width:1px;
-    linkStyle 20 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 20 stroke:#dc2626,stroke-width:3px;
     linkStyle 21 stroke:#d1d5db,stroke-width:1px;
     linkStyle 22 stroke:#d1d5db,stroke-width:1px;
     linkStyle 23 stroke:#d1d5db,stroke-width:1px;
-    linkStyle 24 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 24 stroke:#dc2626,stroke-width:3px;

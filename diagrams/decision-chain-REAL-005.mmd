@@ -1,5 +1,5 @@
-%% 乳腺癌诊疗决策链（高亮病例实际路径）
 graph TD
+    TITLE["REAL-005：HR+/HER2低表达（转移灶 IHC 1+）<br/>骨、肺多发转移 M1"]
     A[初诊乳腺癌]
     B[影像 + 病理 + 分子标志物]
     C[TNM分期与风险分层]
@@ -46,8 +46,11 @@ graph TD
     R --> T
     S --> T
     T --> U
+    TITLE ~~~ A
     classDef path fill:#fca5a5,stroke:#dc2626,color:#7f1d1d,stroke-width:3px;
     classDef dim fill:#f3f4f6,stroke:#d1d5db,color:#9ca3af,stroke-width:1px;
+    classDef caption fill:#fff,stroke:none,color:#111827,font-weight:bold;
+    class TITLE caption;
     class A path;
     class B path;
     class C path;
