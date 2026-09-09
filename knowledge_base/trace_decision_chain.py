@@ -126,13 +126,13 @@ def extract(pd):
     text = _narrative(pd)
     diags = _diagnoses(pd)
 
-    # TNM + 分期
-    m = re.search(r"[cpa]?T(\d)N(\d)M(\d)", text) or re.search(r"T(\d)N(\d)M(\d)", text)
-    tnm = m.group(0) if m else ""
-    stage = ""
-    sm = re.search(r"(IV|Ⅲ|III|Ⅱ|II|Ⅰ|I)A?B?期", text)
-    if sm:
-        stage = sm.group(0)
+    # TNM + 分期（区分初始/当前）；MO→M0 纠正 OCR 误写
+    tnms = [t.replace("MO", "M0") for t in re.findall(r"[cpay]?T[0-9xXO]N[0-9xXO]M[0-9xXO]", text)]
+    stages = re.findall(r"(?:IV|Ⅳ|Ⅲ|III|Ⅱ|II|Ⅰ|I)A?B?C?期", text)
+    tnm = tnms[0] if tnms else ""           # 初始 TNM
+    stage = stages[0] if stages else ""      # 初始分期
+    tnm_latest = tnms[-1] if tnms else ""
+    stage_latest = stages[-1] if stages else ""
 
     # 分子标志物（原始 IHC 证据）
     def _find(p):
@@ -225,7 +225,7 @@ def extract(pd):
         if re.search(kw + r"\s*(继发恶性肿瘤|转移瘤|转移灶|转移)", blob) and site not in sites:
             sites.append(site)
 
-    m1 = "M1" in tnm or stage.startswith("IV") or "Ⅳ" in stage or bool(sites)
+    m1 = bool(sites) or any("M1" in t for t in tnms) or any(s.startswith(("IV", "Ⅳ")) for s in stages)
     m_uncertain = (not m1) and bool(re.search(r"疑似转移|转移[^。；，)]{0,6}待", blob))
 
     # 早期阶段处理方式
@@ -239,6 +239,7 @@ def extract(pd):
 
     return {
         "gender": gender, "age": age, "tnm": tnm, "stage": stage,
+        "tnm_latest": tnm_latest, "stage_latest": stage_latest,
         "subtype": subtype, "er": er, "pr": pr, "her2": her2, "ki67": ki67, "fish": fish,
         "sites": sites, "m1": m1, "tx": tx, "diags": diags, "text": text,
         "neoadjuvant": neoadjuvant, "surgery": surgery, "pcr": pcr, "non_pcr": non_pcr,
@@ -246,12 +247,25 @@ def extract(pd):
     }
 
 
+def _staging(f):
+    """格式化分期显示：区分初始 vs 当前（复发/转移后 M1）。"""
+    init = f"{f['tnm']} {f['stage']}".strip()
+    latest = f"{f['tnm_latest']} {f['stage_latest']}".strip()
+    if not init:
+        return "M1（多发转移）" if f["m1"] else ""
+    if latest and latest != init:
+        return f"{init} → {latest}"
+    if f["m1"] and "M1" not in init:
+        return f"{init} → M1（复发/转移）"
+    return init
+
+
 def trace(f):
     """返回 (steps, path_nodes, path_edges)。step = (node, evidence, branch)。"""
     steps = []
     steps.append(("A", "右乳/腋下肿块，穿刺确诊浸润性癌", ""))
     steps.append(("B", f"彩超/CT/MR/ECT + 穿刺病理 + IHC（{f['her2'] or '见病历'}）", ""))
-    steps.append(("C", f"{f['tnm']} {f['stage']}".strip(), ""))
+    steps.append(("C", _staging(f), ""))
 
     path = ["A", "B", "C"]
     resolved = True
@@ -321,7 +335,7 @@ def trace(f):
 def render_walkthrough(case_id, f, steps):
     lines = [f"病例 {case_id}：{f['gender']} {f['age']}岁",
              f"诊断：{'、'.join(f['diags'])}",
-             f"TNM/分期：{f['tnm']} {f['stage']}".strip(),
+             f"TNM/分期：{_staging(f)}",
              f"分子分型：{f['subtype'] or '未知'}   ER {f['er'] or '-'}  PR {f['pr'] or '-'}  HER2 {f['her2'] or '-'}  Ki67 {f['ki67'] or '-'}  {f['fish']}",
              f"转移部位：{'、'.join(f['sites']) or '无'}",
              "治疗：" + ("；".join(f"{k}：{' + '.join(v)}" for k, v in f['tx'].items() if v) or "未提取到"),
