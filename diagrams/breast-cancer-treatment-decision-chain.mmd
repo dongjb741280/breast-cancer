@@ -1,32 +1,35 @@
 %% 乳腺癌诊疗决策链（高层结构图）
 %% 范围：常见乳腺癌主线；未含年轻乳腺癌、男性乳腺癌及恶性叶状肿瘤（见指南第八/九/十章）
 graph TD
-    A[初诊乳腺癌] --> B[影像 + 病理 + 分子标志物]
-    B --> C[TNM分期与风险分层]
+    A[初诊乳腺癌] --> B[影像 + 病理 + 分子标志物<br/>（ER/PR/HER2/Ki67/FISH、BRCA1/2、PD-L1 CPS、绝经）]
+    B --> C[TNM分期 + 分子分型与风险分层<br/>HER2阳性 / 低表达 / 超低表达 / 三阴性 / HR阳性]
     C --> D{M分期：有无远处转移?}
 
     D -->|否：M0 早期/局部进展期| E{是否适合新辅助治疗?}
-    E -->|是| F[按分子亚型选择新辅助方案]
+    E -->|是| F[按分子亚型选择新辅助方案<br/>HER2+双靶 / 三阴 TP-AC+PD-1（BRCA含铂）/ HR+内分泌]
     E -->|否| G[直接手术与腋窝评估]
     F --> H[手术 + 病理反应评估]
     G --> J[按风险完成术后辅助治疗]
     H --> I{pCR还是残余病灶?}
     I -->|pCR| J[按风险完成术后辅助治疗]
-    I -->|non-pCR| K[强化辅助（HER2+/三阴）<br/>T-DM1 / 卡培他滨 / 奥拉帕利<br/>HR+：按风险辅助]
-    J --> L[放疗 / 内分泌 / 抗HER2 / 免疫等]
+    I -->|non-pCR| K[强化辅助（HER2+/三阴）<br/>T-DM1 / T-DXd / 卡培他滨 / 奥拉帕利（BRCA）/ PD-1至满1年]
+    J --> L[放疗 / 内分泌（绝经前OFS+AI / 绝经后AI+CDK4/6i）<br/>抗HER2 / 免疫]
     K --> L
 
     D -->|是：M1 复发/转移期| M[转移灶再活检与再分型]
     M --> N[评估既往治疗、耐药、疾病速度与患者状态]
-    N --> O[按分子亚型序贯全身治疗<br/>HER2阳性 / HER2低表达<br/>三阴性 / HR阳性]
+    N --> O[按分子亚型序贯全身治疗<br/>HER2阳性 / 低表达/超低表达（T-DXd）<br/>三阴（PD-1 CPS / PARP BRCA）/ HR+（CDK4/6i）]
     O --> P{特殊转移部位?}
     P -->|骨转移| Q[骨改良药 + 局部放疗/手术评估]
-    P -->|脑转移| R[脑部局部治疗 + 全身治疗评估]
+    P -->|脑转移| R{脑转移：脑实质 or 脑膜?}
     P -->|其他内脏/软组织转移| S[继续系统治疗与疗效评估]
+    R -->|脑实质| R1[脑实质转移：SRS / FSRT / 手术 / 全脑放疗]
+    R -->|脑膜| R2[脑膜转移：全中枢放疗 / 鞘内注射]
 
     L --> T[疗效评估、毒性管理、营养/心理支持、生活质量与MDT]
     Q --> T
-    R --> T
+    R1 --> T
+    R2 --> T
     S --> T
     T --> U[长期随访、复发监测与临床研究/真实世界证据更新]
 
@@ -36,7 +39,7 @@ graph TD
     classDef advanced fill:#fce7f3,stroke:#db2777,color:#831843;
     classDef support fill:#ecfccb,stroke:#65a30d,color:#365314;
     class A start;
-    class D,E,I,P decision;
+    class D,E,I,P,R decision;
     class F,G,H,J,K,L early;
-    class M,N,O,Q,R,S advanced;
+    class M,N,O,Q,R1,R2,S advanced;
     class T,U support;

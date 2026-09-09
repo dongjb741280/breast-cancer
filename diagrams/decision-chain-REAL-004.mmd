@@ -1,23 +1,25 @@
 graph TD
     TITLE["REAL-004：HR+/HER2+（IHC 3+）<br/>术后 EC → 多西他赛 + 抗HER2 + 内分泌"]
     A[初诊乳腺癌]
-    B[影像 + 病理 + 分子标志物]
-    C[TNM分期与风险分层]
+    B[影像 + 病理 + 分子标志物<br/>（ER/PR/HER2/Ki67/FISH、BRCA1/2、PD-L1 CPS、绝经）]
+    C[TNM分期 + 分子分型与风险分层<br/>HER2阳性 / 低表达 / 超低表达 / 三阴性 / HR阳性]
     D{M分期：有无远处转移?}
     E{是否适合新辅助治疗?}
-    F[按分子亚型选择新辅助方案]
+    F[按分子亚型选择新辅助方案<br/>HER2+双靶 / 三阴 TP-AC+PD-1（BRCA含铂）/ HR+内分泌]
     G[直接手术与腋窝评估]
     H[手术 + 病理反应评估]
     I{pCR还是残余病灶?}
     J[按风险完成术后辅助治疗]
-    K[强化辅助（HER2+/三阴）<br/>T-DM1 / 卡培他滨 / 奥拉帕利<br/>HR+：按风险辅助]
-    L[放疗 / 内分泌 / 抗HER2 / 免疫等]
+    K[强化辅助（HER2+/三阴）<br/>T-DM1 / T-DXd / 卡培他滨 / 奥拉帕利（BRCA）/ PD-1至满1年]
+    L[放疗 / 内分泌（绝经前OFS+AI / 绝经后AI+CDK4/6i）<br/>抗HER2 / 免疫]
     M[转移灶再活检与再分型]
     N[评估既往治疗、耐药、疾病速度与患者状态]
-    O[按分子亚型序贯全身治疗<br/>HER2阳性 / HER2低表达<br/>三阴性 / HR阳性]
+    O[按分子亚型序贯全身治疗<br/>HER2阳性 / 低表达/超低表达（T-DXd）<br/>三阴（PD-1 CPS / PARP BRCA）/ HR+（CDK4/6i）]
     P{特殊转移部位?}
     Q[骨改良药 + 局部放疗/手术评估]
-    R[脑部局部治疗 + 全身治疗评估]
+    R{脑转移：脑实质 or 脑膜?}
+    R1[脑实质转移：SRS / FSRT / 手术 / 全脑放疗]
+    R2[脑膜转移：全中枢放疗 / 鞘内注射]
     S[继续系统治疗与疗效评估]
     T[疗效评估、毒性管理、营养/心理支持、生活质量与MDT]
     U[长期随访、复发监测与临床研究/真实世界证据更新]
@@ -41,9 +43,12 @@ graph TD
     P -->|骨转移| Q
     P -->|脑转移| R
     P -->|其他内脏/软组织转移| S
+    R -->|脑实质| R1
+    R -->|脑膜| R2
     L --> T
     Q --> T
-    R --> T
+    R1 --> T
+    R2 --> T
     S --> T
     T --> U
     TITLE ~~~ A
@@ -69,6 +74,8 @@ graph TD
     class P dim;
     class Q dim;
     class R dim;
+    class R1 dim;
+    class R2 dim;
     class S dim;
     class T path;
     class U path;
@@ -92,8 +99,11 @@ graph TD
     linkStyle 17 stroke:#d1d5db,stroke-width:1px;
     linkStyle 18 stroke:#d1d5db,stroke-width:1px;
     linkStyle 19 stroke:#d1d5db,stroke-width:1px;
-    linkStyle 20 stroke:#dc2626,stroke-width:3px;
+    linkStyle 20 stroke:#d1d5db,stroke-width:1px;
     linkStyle 21 stroke:#d1d5db,stroke-width:1px;
-    linkStyle 22 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 22 stroke:#dc2626,stroke-width:3px;
     linkStyle 23 stroke:#d1d5db,stroke-width:1px;
-    linkStyle 24 stroke:#dc2626,stroke-width:3px;
+    linkStyle 24 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 25 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 26 stroke:#d1d5db,stroke-width:1px;
+    linkStyle 27 stroke:#dc2626,stroke-width:3px;
