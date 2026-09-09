@@ -90,6 +90,33 @@ def _diagnoses(pd):
     return names
 
 
+def _extract_tx(text):
+    """按给药语境提取治疗，区分当前/既往，排除知情同意/方案模板。"""
+    CATS = [
+        ("抗HER2靶向", r"曲妥珠单抗|帕妥珠单抗|吡咯替尼|拉帕替尼|图卡替尼|奈拉替尼|抗HER-?2靶向|抗Her-?2靶向"),
+        ("内分泌", r"阿那曲唑|来曲唑|他莫昔芬|依西美坦|托瑞米芬|氟维司群|戈舍瑞林|内分泌治疗"),
+        ("化疗", r"多西他赛|多西他塞|紫杉|卡培他滨|表柔比星|环磷酰胺|吉西他滨|长春瑞滨|艾立布林|卡铂|顺铂|化疗"),
+        ("放疗", r"放疗"),
+        ("骨改良药", r"唑来膦酸|地舒单抗|骨改良|骨保护"),
+    ]
+    CUR = r"至今|当前|目前|现在|维持|继续|正在|长期|规律|定期|\d+天/次"
+    PAST = r"既往|曾予|曾行|已予|已完成|术后|序贯|后行|外院|此前|当时|至\s*20\d\d|至\d{4}年"
+
+    cur, past = set(), set()
+    for s in re.split(r"[。；;\n]", text):
+        if re.search(r"上述方案|方案中|知情|告知|委托|授权|同意书", s):
+            continue
+        is_cur = bool(re.search(CUR, s)) and not re.search(r"至\s*(20\d\d|\d{4}年)", s)
+        is_past = bool(re.search(PAST, s)) or (re.search(r"于\s*20\d\d", s) and not is_cur)
+        for name, pat in CATS:
+            if re.search(pat, s):
+                if is_cur:
+                    cur.add(name)
+                elif is_past:
+                    past.add(name)
+    return {"当前": sorted(cur), "既往": sorted(past - cur)}
+
+
 def extract(pd):
     sp = pd.get("standard_patient") or {}
     gender = sp.get("standard_gender", "")
@@ -146,9 +173,30 @@ def extract(pd):
             return 1
         return 0
 
+    # 自由文本 HER2 等级（"HER2 IHC 1+" / "HER2阴性"）
+    def _her2_free():
+        m = re.search(r"HER-?2\s*(?:IHC\s*)?(\d)\+", text)
+        if m:
+            return int(m.group(1))
+        if re.search(r"HER-?2\s*阴性|HER-?2\s*[（(]?\s*[-0]", text):
+            return 0
+        return None
+
+    # 自由文本 HR 阳性（"ER/PR约85%阳性" / "HR阳性" 等）
+    def _hr_free():
+        if re.search(r"HR\s*阳性|Luminal|Lumianl|管腔", text):
+            return True
+        if re.search(r"(?<!H)(?:ER|PR)[^。；，;]{0,10}(阳性|强阳)", text):
+            return True
+        if re.search(r"ER\s*/\s*PR[^。；，;]{0,6}\d+\s*%", text):
+            return True
+        return False
+
     subtype = ""
     for kw, label in (("HER2阳性型", "HER2阳性型"), ("HER2低表达", "HER2低表达型"),
-                      ("三阴性", "三阴性"), ("三阴型", "三阴性")):
+                      ("三阴性", "三阴性"), ("三阴型", "三阴性"),
+                      ("Luminal", "HR阳性(Luminal)"), ("Lumianl", "HR阳性(Luminal)"),
+                      ("管腔", "HR阳性(管腔)")):
         if kw in text:
             subtype = label
             break
@@ -156,15 +204,18 @@ def extract(pd):
         if "扩增阳性" in fish or "ISH阳性" in fish:
             subtype = "HER2阳性型"
         else:
+            hr_pos = _pos(er) or _pos(pr) or _hr_free()
             lv = _her2_level(her2)
+            if lv is None:
+                lv = _her2_free()
             if lv == 3:
                 subtype = "HER2阳性型"
             elif lv == 2:
                 subtype = "HER2阳性型" if "扩增阳性" in fish else ("HER2低表达型" if "阴性" in fish else "HER2待核验(IHC2+)")
             elif lv == 1:
-                subtype = "HER2低表达型"
+                subtype = "HR阳性/HER2低表达" if hr_pos else "HER2低表达型"
             else:  # HER2 阴性（- / 0 / 0分）
-                subtype = "三阴性" if not (_pos(er) or _pos(pr)) else "HR阳性/HER2阴性"
+                subtype = "三阴性" if not hr_pos else "HR阳性/HER2阴性"
 
     # 转移部位：只在「X继发恶性肿瘤 / X转移」语境下命中，避免误伤体检/正常描述
     sites = []
@@ -183,18 +234,8 @@ def extract(pd):
     pcr = bool(re.search(r"pCR|病理学完全缓解|MP\s*5\s*级|RCB\s*0", text))
     non_pcr = bool(re.search(r"non-?pCR|非pCR|未达pCR|未达病理学完全缓解|残余病灶|RCB\s*[IⅡⅢ]", text))
 
-    # 治疗
-    tx = []
-    if re.search(r"曲妥珠单抗|帕妥珠单抗|T-DM1|T-DXd|吡咯替尼|恩美曲妥珠", text):
-        tx.append("抗HER2靶向")
-    if re.search(r"阿那曲唑|来曲唑|他莫昔芬|内分泌", text):
-        tx.append("内分泌")
-    if re.search(r"多西他赛|紫杉|卡培他滨|化疗", text):
-        tx.append("化疗")
-    if re.search(r"放疗", text):
-        tx.append("放疗")
-    if re.search(r"唑来膦酸|地舒单抗|骨改良", text):
-        tx.append("骨改良药")
+    # 治疗（区分当前/既往）
+    tx = _extract_tx(text)
 
     return {
         "gender": gender, "age": age, "tnm": tnm, "stage": stage,
@@ -283,7 +324,7 @@ def render_walkthrough(case_id, f, steps):
              f"TNM/分期：{f['tnm']} {f['stage']}".strip(),
              f"分子分型：{f['subtype'] or '未知'}   ER {f['er'] or '-'}  PR {f['pr'] or '-'}  HER2 {f['her2'] or '-'}  Ki67 {f['ki67'] or '-'}  {f['fish']}",
              f"转移部位：{'、'.join(f['sites']) or '无'}",
-             f"治疗：{' + '.join(f['tx']) or '未提取到'}",
+             "治疗：" + ("；".join(f"{k}：{' + '.join(v)}" for k, v in f['tx'].items() if v) or "未提取到"),
              "", "决策链路径："]
     for node, ev, branch in steps:
         label = NODES[node].replace("<br/>", " / ")
