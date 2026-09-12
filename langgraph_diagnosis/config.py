@@ -26,6 +26,7 @@ CASES: dict[str, str] = {
 
 # LLM
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-5")
+ANTHROPIC_BASE_URL = os.getenv("ANTHROPIC_BASE_URL")  # None = 默认 Anthropic 端点
 
 # RAG
 GUIDE_RETRIEVER = os.getenv("GUIDE_RETRIEVER", "auto")  # auto | vector | bm25

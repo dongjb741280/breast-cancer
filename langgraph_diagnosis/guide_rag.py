@@ -1,17 +1,16 @@
 """指南 RAG（LlamaIndex）：把 guide.md 按标题切块，按病例特征检索相关章节。
 
 默认 GUIDE_RETRIEVER=auto：
-- 配了 OPENAI_API_KEY → VectorStoreIndex（语义检索）
-- 没配 → BM25Retriever（关键词检索，无需 embedding，可立即跑通）
+- 装了 llama-index-embeddings-huggingface → 本地中文向量（BAAI/bge-m3）语义检索
+- 没装 → BM25Retriever（关键词检索，无需 embedding，可立即跑通）
 """
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 from llama_index.core import Settings, VectorStoreIndex
 from llama_index.core.node_parser import MarkdownNodeParser
-from llama_index.core.retrievers import BM25Retriever
+from llama_index.retrievers.bm25 import BM25Retriever
 from llama_index.core.schema import Document
 
 import config
@@ -37,16 +36,33 @@ class GuideRetriever:
         mode = config.GUIDE_RETRIEVER
         if mode != "auto":
             return mode
-        return "vector" if os.getenv("OPENAI_API_KEY") else "bm25"
+        # auto：优先本地中文向量；装不了则退回 BM25
+        try:
+            import llama_index.embeddings.huggingface  # noqa: F401
+            return "vector"
+        except ImportError:
+            return "bm25"
+
+    def _resolve_model_path(self) -> str:
+        """优先用 ModelScope 本地缓存（国内可下大文件），失败则退回 HF 模型名。"""
+        try:
+            from modelscope import snapshot_download
+            return snapshot_download(config.EMBEDDING_MODEL)
+        except Exception:
+            return config.EMBEDDING_MODEL
 
     def _build(self) -> None:
         if self._mode == "vector":
-            from llama_index.embeddings.openai import OpenAIEmbedding
-            Settings.embed_model = OpenAIEmbedding(model=config.EMBEDDING_MODEL)
-            self._index = VectorStoreIndex(self.nodes)
-            self._retriever = self._index.as_retriever(similarity_top_k=self.top_k)
-        else:
-            self._retriever = BM25Retriever.from_defaults(nodes=self.nodes, similarity_top_k=self.top_k)
+            try:
+                from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+                Settings.embed_model = HuggingFaceEmbedding(model_name=self._resolve_model_path())
+                self._index = VectorStoreIndex(self.nodes)
+                self._retriever = self._index.as_retriever(similarity_top_k=self.top_k)
+                return
+            except Exception as e:  # 模型加载失败（网络受限）等 → 退回 BM25
+                print(f"[RAG] 向量模型加载失败，退回 BM25：{e}")
+                self._mode = "bm25"
+        self._retriever = BM25Retriever.from_defaults(nodes=self.nodes, similarity_top_k=self.top_k)
 
     @property
     def mode(self) -> str:

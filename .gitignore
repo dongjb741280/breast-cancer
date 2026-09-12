@@ -21,3 +21,6 @@ Data_Cleaning/process/ocr
 # Patient case data + source PDFs (de-identified but kept out of the public repo)
 Data_Cleaning/doc/
 .gstack/
+
+# Env secrets（真实 key 不入库，模板见 langgraph_diagnosis/.env.example）
+.env

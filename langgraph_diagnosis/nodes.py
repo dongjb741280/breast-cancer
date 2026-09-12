@@ -22,7 +22,14 @@ from schemas import (
 # ---------- 工具 ----------
 
 def _llm():
-    return ChatAnthropic(model=config.ANTHROPIC_MODEL, temperature=0)
+    kwargs = {
+        "model": config.ANTHROPIC_MODEL,
+        "temperature": 0,
+        "thinking": {"type": "disabled"},  # 网关模型默认扩展思考，会与强制 tool_choice（结构化输出）冲突
+    }
+    if config.ANTHROPIC_BASE_URL:
+        kwargs["base_url"] = config.ANTHROPIC_BASE_URL
+    return ChatAnthropic(**kwargs)
 
 
 def _features_block(f) -> str:
